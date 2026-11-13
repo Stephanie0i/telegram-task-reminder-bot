@@ -9,6 +9,10 @@ A lightweight, multi-user Telegram bot written in Python that helps users organi
 - **Progress Tracking:** Calculate your completion rate and view structured progress statistics.
 - **Scheduled Reminders:** Configure automated daily reminders at a custom time with timezone support (`Africa/Algiers`).
 - **Persistent Storage:** Tasks and reminder preferences persist safely across bot reboots in JSON format.
+- <img width="877" height="1024" alt="image" src="https://github.com/user-attachments/assets/93d581cc-7409-436a-b73c-a8d972885af1" />
+<img width="869" height="929" alt="image" src="https://github.com/user-attachments/assets/c5c414ce-a7c8-4822-9077-4cff8ee24fc9" />
+
+
 
 ## Available Commands
 
@@ -70,3 +74,4 @@ This bot is configured to run continuously on a cloud host (such as Wispbyte, VP
 1. Deploy `bot.py`, `requirements.txt`, and dependencies.
 2. Supply `TOKEN` and `ID` securely via environment variables or secret store.
 3. Start `bot.py` as a managed system service or background worker.
+
