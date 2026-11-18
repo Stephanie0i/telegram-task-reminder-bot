@@ -17,6 +17,8 @@ A multi-user Telegram bot written in Python. It combines a personal to-do list, 
 
 <img width="877" height="1024" alt="image" src="https://github.com/user-attachments/assets/93d581cc-7409-436a-b73c-a8d972885af1" />
 <img width="869" height="929" alt="image" src="https://github.com/user-attachments/assets/c5c414ce-a7c8-4822-9077-4cff8ee24fc9" />
+<img width="872" height="920" alt="image" src="https://github.com/user-attachments/assets/c3799acb-694d-4bbe-b644-5a9ac255f346" />
+
 
 ## Available Commands
 
