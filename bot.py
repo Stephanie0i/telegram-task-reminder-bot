@@ -50,7 +50,7 @@ token = os.getenv("TOKEN")
 
 async def start(update, context):
     await update.message.reply_text(f"Hello {update.message.from_user.first_name} how can i help u!")
-    await update.message.reply_text(f"u can use\n1). '/ask' for AI using\n2). '/add' to save a task\n3). '/remove' to remove a task u add\n4). '/tasks' to see ur tasks list\n5). '/done' to put a tasks in the done list\n6). '/stats' to see ur stats percentage\n7). '/remind' to set a reminder for a task ")
+    await update.message.reply_text(f"u can use\n1). '/ask' for AI using\n2). '/add' to save a task\n3). '/remove' to remove a task u add\n4). '/tasks' to see ur tasks list\n5). '/done' to put a tasks in the done list\n6). '/stats' to see ur stats percentage\n7). '/remind' to set a reminder for a task\n8). '/fact' to get a fact about cats ")
 
 async def ask_command(update, context):
     question = " ".join(context.args)
