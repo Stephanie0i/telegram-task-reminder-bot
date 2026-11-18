@@ -12,6 +12,7 @@ NVIDIA_llm = os.getenv("NVIDIA_API_KEY")
 MODEL="nvidia/nemotron-3.5-bolt-e4b"
 URL="https://integrate.api.nvidia.com/v1/chat/completions"
 SYSTEM_PROMPT="You are a general assistant. Answer briefly."
+DAILY_LIMIT = 20
 def ask_ai(messages):
     try:
         body = {"model": MODEL, "max_tokens": 200, "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + messages}
@@ -48,6 +49,21 @@ def get_cat_fact():
 
 token = os.getenv("TOKEN")
 
+def can_use_ai(user_id):
+    today = str(datetime.date.today())
+    tasks = load_tasks()
+    if user_id not in tasks:
+        tasks[user_id] = {"todo": [], "done": []}
+    user = tasks[user_id]
+    if user.get("ai_date") != today:
+        user["ai_date"] = today
+        user["ai_count"] = 0
+    if user["ai_count"] >= DAILY_LIMIT:
+        return False
+    user["ai_count"] = user["ai_count"] + 1
+    save_tasks(tasks)
+    return True
+
 async def start(update, context):
     await update.message.reply_text(f"Hello {update.message.from_user.first_name} how can i help u!")
     await update.message.reply_text(f"u can use\n1). '/ask' for AI using\n2). '/add' to save a task\n3). '/remove' to remove a task u add\n4). '/tasks' to see ur tasks list\n5). '/done' to put a tasks in the done list\n6). '/stats' to see ur stats percentage\n7). '/remind' to set a reminder for a task\n8). '/fact' to get a fact about cats ")
@@ -59,6 +75,9 @@ async def ask_command(update, context):
         await update.message.reply_text(f"AI chat is on. Drop your questions")
         start_timer(update, context)
     else:
+        if not can_use_ai(str(update.message.from_user.id)):
+            await update.message.reply_text(f"You reached today’s AI limit, try tomorrow")
+        return
         answer = await asyncio.to_thread(ask_ai, [{"role": "user", "content": question}])
         await update.message.reply_text(answer)
 
@@ -202,6 +221,9 @@ async def handle_text(update, context):
             save_tasks(tasks)
         context.user_data["waiting"] = False
     elif context.user_data.get("chatting") is True:
+        if not can_use_ai(str(update.message.from_user.id)):
+            await update.message.reply_text(f"You reached today’s AI limit, try tomorrow")
+            return
         history = context.user_data.setdefault("history", [])
         history.append({"role": "user", "content": update.message.text})
         answer = await asyncio.to_thread(ask_ai, history[-10:])
