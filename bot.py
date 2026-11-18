@@ -1,10 +1,28 @@
 import json
+import requests
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 import os
 from dotenv import load_dotenv
 import datetime
 import zoneinfo
+import asyncio
 load_dotenv()
+NVIDIA_llm = os.getenv("NVIDIA_API_KEY")
+
+MODEL="nvidia/nemotron-3.5-bolt-e4b"
+URL="https://integrate.api.nvidia.com/v1/chat/completions"
+SYSTEM_PROMPT="You are a general assistant. Answer briefly."
+def ask_ai(messages):
+    try:
+        body = {"model": MODEL, "max_tokens": 200, "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + messages}
+        r = requests.post(URL, json=body, timeout=30, headers={"Authorization": f"Bearer {NVIDIA_llm}"})
+    except requests.exceptions.RequestException as e:
+        return "no connection"
+
+    if r.status_code == 200:
+        return r.json()["choices"][0]["message"]["content"]
+    else:
+        return f"request_failed due to {r.status_code} error"
 
 def load_tasks():
     try:
@@ -17,6 +35,17 @@ def save_tasks(tasks):
     with open("tasks.json", "w") as sf:
         json.dump(tasks, sf)
 
+def get_cat_fact():
+    try:
+        r = requests.get("https://catfact.ninja/fact", timeout=10)
+    except requests.exceptions.RequestException:
+        return "no connection"
+    if r.status_code == 200:
+        fact = r.json()
+        return fact["fact"]
+    else:
+        return f"request_failed due to {r.status_code} error"
+
 token = os.getenv("TOKEN")
 
 async def start(update, context):
@@ -24,7 +53,18 @@ async def start(update, context):
     await update.message.reply_text(f"u can use\n1). '/ask' for AI using\n2). '/add' to save a task\n3). '/remove' to remove a task u add\n4). '/tasks' to see ur tasks list\n5). '/done' to put a tasks in the done list\n6). '/stats' to see ur stats percentage\n7). '/remind' to set a reminder for a task ")
 
 async def ask_command(update, context):
-    await update.message.reply_text("AI feature coming soon...")
+    question = " ".join(context.args)
+    if question == "":
+        context.user_data["chatting"] = True
+        await update.message.reply_text(f"AI chat is on. Drop your questions")
+        start_timer(update, context)
+    else:
+        answer = await asyncio.to_thread(ask_ai, [{"role": "user", "content": question}])
+        await update.message.reply_text(answer)
+
+async def fact_command(update, context):
+    cat_fact = await asyncio.to_thread(get_cat_fact)
+    await update.message.reply_text(cat_fact)
 
 async def remove_command(update, context):
     task = " ".join(context.args)
@@ -161,16 +201,44 @@ async def handle_text(update, context):
             tasks[user_id]["todo"].append(task)
             save_tasks(tasks)
         context.user_data["waiting"] = False
+    elif context.user_data.get("chatting") is True:
+        history = context.user_data.setdefault("history", [])
+        history.append({"role": "user", "content": update.message.text})
+        answer = await asyncio.to_thread(ask_ai, history[-10:])
+        history.append({"role": "assistant", "content": answer})
+        await update.message.reply_text(answer)
+        start_timer(update, context)
+
+def stop_timer(update, context):
+    name = f"chat_{update.message.from_user.id}"
+    for job in context.job_queue.get_jobs_by_name(name):
+        job.schedule_removal()
+
+async def chat_timeout(context):
+    context.user_data["chatting"] = False
+    await context.bot.send_message(chat_id=context.job.chat_id, text="AI chat ended, you were inactive for a minute.")
+
+def start_timer(update, context):
+    stop_timer(update, context)
+    name = f"chat_{update.message.from_user.id}"
+    context.job_queue.run_once(chat_timeout, 60, chat_id=update.message.chat_id, user_id=update.message.from_user.id, name=name)
+
+async def end_chat(update, context):
+    if not update.message.text.startswith("/ask"):
+        context.user_data["chatting"] = False
+        stop_timer(update, context)
 app = ApplicationBuilder().token(token).build()
 app.add_handler(CommandHandler("remind", remind))
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("ask", ask_command))
+app.add_handler(CommandHandler("fact", fact_command))
 app.add_handler(CommandHandler("stats", stats_command))
 app.add_handler(CommandHandler("add", add_command))
 app.add_handler(CommandHandler("done", done_command))
 app.add_handler(CommandHandler("tasks", tasks_command))
 app.add_handler(CommandHandler("remove", remove_command))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+app.add_handler(MessageHandler(filters.COMMAND, end_chat), group=-1)
 tasks = load_tasks()
 for user_id, data in tasks.items():
     if "time" in data:
