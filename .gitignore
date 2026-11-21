@@ -26,3 +26,5 @@ ENV/
 *.swo
 Thumbs.db
 .DS_Store
+# Database
+*.db
